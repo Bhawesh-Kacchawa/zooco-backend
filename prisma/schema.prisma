@@ -1,0 +1,42 @@
+// Prisma schema for ZOOCO Daily Reminders App
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Pet {
+  id        String     @id @default(cuid())
+  name      String
+  avatarUrl String?
+  createdAt DateTime   @default(now())
+  reminders Reminder[]
+}
+
+model Reminder {
+  id          String       @id @default(cuid())
+  petId       String
+  pet         Pet          @relation(fields: [petId], references: [id], onDelete: Cascade)
+  category    String // General | Lifestyle | Health
+  title       String
+  notes       String?
+  startDate   DateTime
+  startTime   String // stored as "HH:mm" or "hh:mm a"
+  frequency   String // Everyday | Custom | etc.
+  isCompleted Boolean      @default(false)
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  completions Completion[]
+}
+
+model Completion {
+  id         String   @id @default(cuid())
+  reminderId String
+  reminder   Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  date       DateTime @default(now())
+}
