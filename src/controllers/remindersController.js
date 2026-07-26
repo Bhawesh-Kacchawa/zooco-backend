@@ -1,4 +1,5 @@
 import { prisma } from '../prisma/client.js';
+import { expandReminderOccurrences } from '../utils/reminderRecurrence.js';
 
 // GET /api/reminders?petId=&category=&date=
 export async function getReminders(req, res, next) {
@@ -10,22 +11,37 @@ export async function getReminders(req, res, next) {
       ...(category && { category }),
     };
 
-    // Optional single-day filter (matches the calendar strip's selected date)
+    let reminders = [];
+
     if (date) {
       const start = new Date(date);
       start.setHours(0, 0, 0, 0);
       const end = new Date(start);
       end.setHours(23, 59, 59, 999);
-      where.startDate = { gte: start, lte: end };
+
+      where.startDate = { lte: end };
+
+      reminders = await prisma.reminder.findMany({
+        where,
+        include: { pet: true },
+        orderBy: { startDate: 'asc' },
+      });
+
+      const expanded = expandReminderOccurrences(reminders, {
+        date: start,
+        rangeEnd: end,
+      });
+
+      return res.json(expanded);
     }
 
-    const reminders = await prisma.reminder.findMany({
+    reminders = await prisma.reminder.findMany({
       where,
       include: { pet: true },
-      orderBy: { startTime: 'asc' },
+      orderBy: { startDate: 'asc' },
     });
 
-    res.json(reminders);
+    res.json(expandReminderOccurrences(reminders));
   } catch (err) {
     next(err);
   }
